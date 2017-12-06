@@ -26,21 +26,24 @@ import java.util.stream.Stream;
 public class Arkanoid extends Application{
     private static final int width = 400;
     private static final int height = 600;
-    private int playerOneXPos = width/2 - width/10;
-    private double playerTwoXPos = height - PLAYER_HEIGHT;
+    private double playerOneXPos = width/2 - width/10;
     private static final int PLAYER_HEIGHT = 15;
     private static final int PLAYER_WIDTH = 100;
     private static final double BALL_R = 15;
     private int ballYSpeed = 1;
     private int ballXSpeed = 1;
-    private double playerOneYPos = height - 20;
+    private double playerOneYPos = height - 15;
+    private final double originpadposX = width/2 - width/10;
+    private final double originpadposY = height - 15;
     private double playerTwoYPos = height / 2;
+    private final double originballX = width/2;
+    private final double originballY = height - PLAYER_HEIGHT - BALL_R;
     private double ballXPos = width/2;
-    private double ballYPos = height - 100;
+    private double ballYPos = height - PLAYER_HEIGHT - BALL_R;
     private int scoreP1 = 0;
     private int scoreP2 = 0;
     private boolean gameStarted;
-
+    public static int cmp = 0;
     //gc.fillRect(width/2,height-20,100,15);
 
     public MenuBar topGui(){
@@ -84,7 +87,26 @@ public class Arkanoid extends Application{
         return bottom;
     }
 
+    public boolean hitWall(){
+        return (ballXPos >= width || ballYPos <= 0 || ballXPos <= 0) && !(ballYPos >= height);
+    }
 
+    public boolean hitpaddle(){
+        return ballXPos < playerOneXPos + PLAYER_WIDTH && ballYPos >= playerOneYPos && ballYPos < playerOneYPos + PLAYER_HEIGHT;
+    }
+
+    public boolean fallout(){
+
+        return ballYPos > height;
+    }
+
+    public void relaunch(){
+        ballXPos = originballX;
+        ballYPos = originballY;
+        playerOneXPos = originpadposX;
+        playerOneYPos = originpadposY;
+        gameStarted = false;
+    }
 
     @Override
     public void start(Stage primaryStage) throws Exception {
@@ -112,7 +134,7 @@ public class Arkanoid extends Application{
                     break;
             }
         });
-        canvas.setOnMouseClicked(e ->  gameStarted = true);
+        canvas.setOnMouseClicked(e ->  {gameStarted = true; cmp+=1;});
         BorderPane root = new BorderPane();
         root.setTop(topGui());
         root.setCenter(canvas);
@@ -128,8 +150,7 @@ public class Arkanoid extends Application{
         gc.setFill(Color.WHITE);
         gc.setFont(Font.font(25));
         if(gameStarted) {
-            System.out.println("Ball Position for X : "  + ballXPos + " Ball position for Y : " + ballYPos);
-            System.out.println("Player Position for X : "  + playerOneXPos + " Player position for Y : " + playerOneYPos);
+
             ballXPos+=ballXSpeed;
             ballYPos+=ballYSpeed;
             if(ballXPos < width - width  / 4) {
@@ -137,10 +158,10 @@ public class Arkanoid extends Application{
             }  else {
                 playerTwoYPos =  ballYPos > playerTwoYPos + PLAYER_HEIGHT / 2 ?playerTwoYPos += 1: playerTwoYPos - 1;
             }
-            gc.fillOval(ballXPos, ballYPos, BALL_R, BALL_R);
+            //gc.fillOval(ballXPos, ballYPos, BALL_R, BALL_R);
         } else {
-            ballXPos = width/2;
-            ballYPos = height - 100;
+            //ballXPos = width/2;
+            //ballYPos = height - 100;
             gc.setStroke(Color.YELLOW);
             gc.setTextAlign(TextAlignment.CENTER);
             gc.strokeText("Click to Start", width / 2, height / 2);
@@ -149,6 +170,16 @@ public class Arkanoid extends Application{
             ballXSpeed = new Random().nextInt(2) == 0 ? 1: -1;
             ballYSpeed = new Random().nextInt(2) == 0 ? 1: -1;
         }
+        if(hitWall()){
+            ballYSpeed += 1 * Math.signum(ballYSpeed);
+            ballXSpeed += 1 * Math.signum(ballXSpeed);
+            ballXSpeed *= -1;
+            ballYSpeed *= -1;
+        }
+
+
+
+
         //if(ballYPos > height || ballYPos < 0) ballYSpeed *=-1;
         if((ballXPos == playerOneXPos + PLAYER_HEIGHT) && (ballYPos <= playerOneYPos) && (ballYPos >= playerOneYPos + PLAYER_WIDTH)){
             System.out.println("here");
@@ -156,19 +187,24 @@ public class Arkanoid extends Application{
         }
         /*gameStarted && (ballXPos >= playerOneXPos - PLAYER_WIDTH/2 && ballXPos <= playerOneXPos + PLAYER_WIDTH/2)*/
 
-        if((ballXPos < playerOneXPos + PLAYER_WIDTH && ballYPos >= playerOneYPos && ballYPos <= playerOneYPos + PLAYER_HEIGHT)
-                || (ballXPos <= 0 && ballYPos >= 0) || (ballXPos >= width && ballYPos <= height) ){
+        if(hitpaddle()){
             System.out.println("here2");
+            System.out.println("Ball Position for X : "  + ballXPos + " Ball position for Y : " + ballYPos);
+            System.out.println("Player Position for X : "  + playerOneXPos + " Player position for Y : " + playerOneYPos);
             ballYSpeed += 1 * Math.signum(ballYSpeed);
             ballXSpeed += 1 * Math.signum(ballXSpeed);
             ballXSpeed *= -1;
             ballYSpeed *= -1;
         }
-        if(ballXPos > playerOneXPos + PLAYER_HEIGHT && ballYPos > playerOneYPos + PLAYER_WIDTH) {
+
+        if(fallout()){
+            relaunch();
+        }
+        /*if(ballXPos > playerOneXPos + PLAYER_HEIGHT && ballYPos > playerOneYPos + PLAYER_WIDTH) {
             //scoreP2++;
 
             gameStarted = false;
-        }
+        }*/
 
 
         /*if(((ballXPos == playerOneXPos + PLAYER_WIDTH) && ballYPos < playerOneYPos && ballYPos > playerOneYPos + PLAYER_WIDTH)) {
@@ -179,15 +215,10 @@ public class Arkanoid extends Application{
             System.out.println("here");
         }*/
 
-        /*if(ballXPos > playerTwoXPos + PLAYER_WIDTH) {
-            scoreP1++;
-            gameStarted = false;
-        }
-        */
         //gc.fillText(scoreP1 + "\t\t\t\t\t\t\t\t" + scoreP2, width / 2, 100);
-        //gc.fillRect(playerTwoXPos, playerTwoYPos, PLAYER_WIDTH, PLAYER_HEIGHT);
+        gc.fillOval(ballXPos, ballYPos, BALL_R, BALL_R);
         gc.fillRect(playerOneXPos, playerOneYPos, PLAYER_WIDTH, PLAYER_HEIGHT);
-        //gc.fillRect(width/2,height-20,100,15);
+        cmp = 0;
     }
     public static void main (String[] args){
         Application.launch();

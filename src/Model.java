@@ -22,6 +22,9 @@ public class Model {
 
     class Ball{
 
+        public Ball(){
+
+        }
     }
 
     class Block{
