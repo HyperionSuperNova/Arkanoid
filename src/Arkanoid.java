@@ -35,16 +35,13 @@ public class Arkanoid extends Application{
     private double playerOneYPos = height - 15;
     private final double originpadposX = width/2 - width/10;
     private final double originpadposY = height - 15;
-    private double playerTwoYPos = height / 2;
     private final double originballX = width/2;
     private final double originballY = height - PLAYER_HEIGHT - BALL_R;
     private double ballXPos = width/2;
     private double ballYPos = height - PLAYER_HEIGHT - BALL_R;
     private int scoreP1 = 0;
-    private int scoreP2 = 0;
     private boolean gameStarted;
     public static int cmp = 0;
-    //gc.fillRect(width/2,height-20,100,15);
 
     public MenuBar topGui(){
         MenuItem gl = new MenuItem("(Re)Launch");
@@ -91,12 +88,15 @@ public class Arkanoid extends Application{
         return (ballXPos >= width || ballYPos <= 0 || ballXPos <= 0) && !(ballYPos >= height);
     }
 
+    public boolean hitUpperWall(){
+        return ballYPos <= 0;
+    }
+
     public boolean hitpaddle(){
-        return ballXPos < playerOneXPos + PLAYER_WIDTH && ballYPos >= playerOneYPos && ballYPos < playerOneYPos + PLAYER_HEIGHT;
+        return ballXPos < playerOneXPos + PLAYER_WIDTH && ballXPos > playerOneXPos && ballYPos > playerOneYPos - PLAYER_HEIGHT && ballYPos <= playerOneYPos + BALL_R;
     }
 
     public boolean fallout(){
-
         return ballYPos > height;
     }
 
@@ -118,9 +118,9 @@ public class Arkanoid extends Application{
         canvas.addEventFilter(MouseEvent.ANY, (e) -> canvas.requestFocus());
         canvas.setOnKeyPressed(e -> {
             switch (e.getCode()){
-                case Q: playerOneXPos -= 100;
+                case Q: playerOneXPos -= 50;
                 break;
-                case D: playerOneXPos += 100;
+                case D: playerOneXPos += 50;
                 break;
             }
         });
@@ -150,75 +150,48 @@ public class Arkanoid extends Application{
         gc.setFill(Color.WHITE);
         gc.setFont(Font.font(25));
         if(gameStarted) {
-
             ballXPos+=ballXSpeed;
             ballYPos+=ballYSpeed;
-            if(ballXPos < width - width  / 4) {
-                playerTwoYPos = ballYPos - PLAYER_HEIGHT / 2;
-            }  else {
-                playerTwoYPos =  ballYPos > playerTwoYPos + PLAYER_HEIGHT / 2 ?playerTwoYPos += 1: playerTwoYPos - 1;
-            }
-            //gc.fillOval(ballXPos, ballYPos, BALL_R, BALL_R);
         } else {
-            //ballXPos = width/2;
-            //ballYPos = height - 100;
             gc.setStroke(Color.YELLOW);
             gc.setTextAlign(TextAlignment.CENTER);
             gc.strokeText("Click to Start", width / 2, height / 2);
-
-
-            ballXSpeed = new Random().nextInt(2) == 0 ? 1: -1;
-            ballYSpeed = new Random().nextInt(2) == 0 ? 1: -1;
         }
         if(hitWall()){
-            ballYSpeed += 1 * Math.signum(ballYSpeed);
-            ballXSpeed += 1 * Math.signum(ballXSpeed);
             ballXSpeed *= -1;
-            ballYSpeed *= -1;
         }
 
-
-
-
-        //if(ballYPos > height || ballYPos < 0) ballYSpeed *=-1;
-        if((ballXPos == playerOneXPos + PLAYER_HEIGHT) && (ballYPos <= playerOneYPos) && (ballYPos >= playerOneYPos + PLAYER_WIDTH)){
-            System.out.println("here");
-
+        if(hitUpperWall()){
+            ballYSpeed *= - 1;
         }
-        /*gameStarted && (ballXPos >= playerOneXPos - PLAYER_WIDTH/2 && ballXPos <= playerOneXPos + PLAYER_WIDTH/2)*/
 
         if(hitpaddle()){
-            System.out.println("here2");
-            System.out.println("Ball Position for X : "  + ballXPos + " Ball position for Y : " + ballYPos);
-            System.out.println("Player Position for X : "  + playerOneXPos + " Player position for Y : " + playerOneYPos);
-            ballYSpeed += 1 * Math.signum(ballYSpeed);
-            ballXSpeed += 1 * Math.signum(ballXSpeed);
-            ballXSpeed *= -1;
-            ballYSpeed *= -1;
+            if(ballXPos > playerOneXPos + PLAYER_WIDTH/2) {
+                System.out.println("Second Half");
+                System.out.println("Ball Speed for X : "  + ballXSpeed + " Ball speed for Y : " + ballYSpeed);
+                System.out.println("Ball Position for X : "  + ballXPos + " Ball position for Y : " + ballYPos);
+                System.out.println("Player Position for X : "  + playerOneXPos + " Player position for Y : " + playerOneYPos);
+
+                if (ballXSpeed < 0) ballXSpeed *= -1;
+                ballYSpeed *= -1;
+            }else if(ballXPos < playerOneXPos + PLAYER_WIDTH/2){
+                System.out.println("First Half");
+                System.out.println("Ball Speed for X : "  + ballXSpeed + " Ball speed for Y : " + ballYSpeed);
+                System.out.println("Ball Position for X : "  + ballXPos + " Ball position for Y : " + ballYPos);
+                System.out.println("Player Position for X : "  + playerOneXPos + " Player position for Y : " + playerOneYPos);
+                if(ballXSpeed > 0) ballXSpeed *= -1;
+                ballYSpeed *= -1;
+            }
+
         }
 
         if(fallout()){
             relaunch();
+            cmp = 0;
+
         }
-        /*if(ballXPos > playerOneXPos + PLAYER_HEIGHT && ballYPos > playerOneYPos + PLAYER_WIDTH) {
-            //scoreP2++;
-
-            gameStarted = false;
-        }*/
-
-
-        /*if(((ballXPos == playerOneXPos + PLAYER_WIDTH) && ballYPos < playerOneYPos && ballYPos > playerOneYPos + PLAYER_WIDTH)) {
-            ballYSpeed += 1 * Math.signum(ballYSpeed);
-            ballXSpeed += 1 * Math.signum(ballXSpeed);
-            ballXSpeed *= -1;
-            ballYSpeed *= -1;
-            System.out.println("here");
-        }*/
-
-        //gc.fillText(scoreP1 + "\t\t\t\t\t\t\t\t" + scoreP2, width / 2, 100);
         gc.fillOval(ballXPos, ballYPos, BALL_R, BALL_R);
         gc.fillRect(playerOneXPos, playerOneYPos, PLAYER_WIDTH, PLAYER_HEIGHT);
-        cmp = 0;
     }
     public static void main (String[] args){
         Application.launch();
