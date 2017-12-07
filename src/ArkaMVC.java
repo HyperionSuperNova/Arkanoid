@@ -1,12 +1,10 @@
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Application;
-import javafx.event.EventHandler;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.*;
-import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
@@ -16,24 +14,18 @@ import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Random;
-import java.util.stream.Stream;
-
 public class ArkaMVC extends Application {
     private int scoreP1 = 0;
     private boolean gameStarted;
     public static int cmp = 0;
+    public static int cmppause = 0;
     Model m = new Model();
 
-    public MenuBar topGui() {
+    public MenuBar topGui(Timeline tl) {
         MenuItem gl = new MenuItem("(Re)Launch");
-        //Insert Event here
+        gl.setOnAction(e -> relaunch());
         MenuItem p = new MenuItem("Pause");
-        //Insert Event here
+        p.setOnAction(e -> tl.pause());
         MenuItem q = new MenuItem("Quit");
         q.setOnAction(e -> System.exit(0));
         Menu game = new Menu("Game");
@@ -94,6 +86,7 @@ public class ArkaMVC extends Application {
         gameStarted = false;
     }
 
+
     @Override
     public void start(Stage primaryStage) throws Exception {
         Canvas canvas = new Canvas(m.getWidth(), m.getHeight());
@@ -129,7 +122,7 @@ public class ArkaMVC extends Application {
             cmp += 1;
         });
         BorderPane root = new BorderPane();
-        root.setTop(topGui());
+        root.setTop(topGui(tl));
         root.setCenter(canvas);
         root.setLeft(leftGui());
         root.setBottom(bottomGui());
@@ -159,10 +152,12 @@ public class ArkaMVC extends Application {
         }
 
         if (hitUpperWall()) {
+            m.b.setBallXSpeed(m.b.getBallXSpeed() * (-1));
             m.b.setBallYSpeed(m.b.getBallYSpeed() * (-1));
         }
 
         if (hitpaddle()) {
+            //Decouper en trois coté gauche, milieu puis centre
             if (m.b.getBallXPos() > m.p.getPlayerOneXPos() + m.p.getPLAYER_WIDTH() / 2) {
                 System.out.println("Second Half");
 
