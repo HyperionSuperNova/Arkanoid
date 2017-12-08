@@ -27,8 +27,66 @@ public class Model {
             ArrayList<String> str = new ArrayList<String>();
             try (Stream<String> stream = Files.lines(Paths.get(name))) {
                 stream.forEach(str::add);
+
             }
             return str;
+        }
+
+        public String[] formatTailleBlocCouleur(String s) throws IOException{
+            String res[] = new String[5];
+            try{ 
+                String deb[] = s.split(" & ");
+                for(int i = 0; i < deb.length-1; i++){
+                    deb[i] = deb[i].substring(1,deb[i].length()-1);
+                }
+                String prem[] = deb[0].split(", ");
+                String deux[] = deb[1].split(", ");
+                res[0] = prem[0];
+                res[1] = prem[1];
+                res[2] = deux[0];
+                res[3] = deux[1];
+                res[4] = deb[2];
+                return res;
+            }catch(Exception e){
+                e = new IOException("FileFormatException");
+                System.out.println(e);
+                return null;
+            }
+        }
+
+        public ArrayList<String[]> formatBeforeView(ArrayList<String> l) throws IOException{
+            ArrayList<String[]> res = new ArrayList<String[]>();
+            String deb[] = l.get(0).split(" x ");
+            int largeur = Integer.parseInt(deb[0]);
+            int longueur = Integer.parseInt(deb[1]);
+            res.add(deb);
+            for(int i = 1; i < l.size(); i++){
+                String []tmp = formatTailleBlocCouleur(l.get(i));
+                if(tmp != null){
+                    for(int j = 0; j < tmp.length-1; j++){
+                        if(j%2 == 0){
+                            if(Integer.parseInt(tmp[j]) < 0 || Integer.parseInt(tmp[j]) > largeur){
+                                throw new IOException("NumberFormatException");
+                            }
+                        }else{
+                            if(Integer.parseInt(tmp[j]) < 0 || Integer.parseInt(tmp[j]) > longueur){
+                                throw new IOException("NumberFormatException");
+                            }
+                        }
+                    }
+                    res.add(tmp);
+                }else throw new IOException("FileFormatException");
+            }
+            return res;
+        }
+
+        public void affiche(ArrayList<String[]> l){
+            for(String s[]: l){
+                for(int i = 0; i < s.length; i++){
+                    System.out.print(s[i] + " ");
+                }
+                System.out.println();
+            }
         }
     }
 
