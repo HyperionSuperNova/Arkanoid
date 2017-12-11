@@ -1,12 +1,10 @@
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Application;
-import javafx.event.EventHandler;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.*;
-import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
@@ -17,47 +15,37 @@ import javafx.stage.Stage;
 import javafx.util.Duration;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Random;
-import java.util.stream.Stream;
+import java.util.logging.Level;
 
-public class Arkanoid extends Application{
-    private static final int width = 400;
-    private static final int height = 600;
-    private double playerOneXPos = width/2 - width/10;
-    private static final int PLAYER_HEIGHT = 15;
-    private static final int PLAYER_WIDTH = 100;
-    private static final double BALL_R = 15;
-    private int ballYSpeed = 1;
-    private int ballXSpeed = 1;
-    private double playerOneYPos = height - 15;
-    private final double originpadposX = width/2 - width/10;
-    private final double originpadposY = height - 15;
-    private final double originballX = width/2;
-    private final double originballY = height - PLAYER_HEIGHT - BALL_R;
-    private double ballXPos = width/2;
-    private double ballYPos = height - PLAYER_HEIGHT - BALL_R;
+public class Arkanoid extends Application {
     private int scoreP1 = 0;
     private boolean gameStarted;
     public static int cmp = 0;
+    public static int cmppause = 0;
+    Model m = new Model();
+    Canvas canvas = new Canvas(m.getWidth(), m.getHeight());
+    GraphicsContext gc = canvas.getGraphicsContext2D();
+    public Arkanoid() throws IOException {
+    }
 
-    public MenuBar topGui(){
+    public MenuBar topGui(Timeline tl) {
         MenuItem gl = new MenuItem("(Re)Launch");
-        //Insert Event here
+        gl.setOnAction(e -> relaunch());
         MenuItem p = new MenuItem("Pause");
-        //Insert Event here
+        p.setOnAction(e -> tl.pause());
+        MenuItem res = new MenuItem("Resume");
+        res.setOnAction(e -> tl.playFromStart());
         MenuItem q = new MenuItem("Quit");
         q.setOnAction(e -> System.exit(0));
         Menu game = new Menu("Game");
-        game.getItems().addAll(gl,p,q);
+        game.getItems().addAll(gl, p, res,q);
         MenuBar menu = new MenuBar();
         menu.getMenus().add(game);
         return menu;
     }
 
-    public VBox leftGui(){
+    public VBox leftGui(Timeline tl) {
         VBox box = new VBox(20);
         Button level1 = new Button("Level 1");
         Button level2 = new Button("Level 2");
@@ -66,6 +54,29 @@ public class Arkanoid extends Application{
         Button level5 = new Button("Level 5");
         Button level6 = new Button("Level 6");
         Button level7 = new Button("Level 7");
+        level1.setOnAction(event -> {
+            try {
+                m.setBg(m.levelBlocks("Niveaux/niveau1"));
+                gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
+                System.out.println("here");
+                //tl.playFromStart();
+                relaunch();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
+        level2.setOnAction(event -> {
+            try {
+                m.setBg(m.levelBlocks("Niveaux/niveau2"));
+                gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
+                System.out.println("here");
+                relaunch();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
+
+
         Text ltf = new Text("Levels");
         box.getChildren().add(ltf);
         box.getChildren().add(level1);
@@ -75,125 +86,176 @@ public class Arkanoid extends Application{
         box.getChildren().add(level5);
         box.getChildren().add(level6);
         box.getChildren().add(level7);
+
         return box;
     }
 
-    public HBox bottomGui(){
+
+    public HBox bottomGui() {
         HBox bottom = new HBox(2000);
         bottom.getChildren().add(new Text("Hello World"));
         return bottom;
     }
 
-    public boolean hitWall(){
-        return (ballXPos >= width || ballYPos <= 0 || ballXPos <= 0) && !(ballYPos >= height);
+    public boolean hitWall() {
+        return ((m.b.getBallXPos() >= m.getWidth()) || (m.b.getBallYPos() <= 0) || (m.b.getBallXPos() <= 0)) && !(m.b.getBallYPos() >= m.getHeight());
     }
 
-    public boolean hitUpperWall(){
-        return ballYPos <= 0;
+    public boolean hitUpperWall() {
+        return m.b.getBallYPos() <= 0;
     }
 
-    public boolean hitpaddle(){
-        return ballXPos < playerOneXPos + PLAYER_WIDTH && ballXPos > playerOneXPos && ballYPos > playerOneYPos - PLAYER_HEIGHT && ballYPos <= playerOneYPos + BALL_R;
+    public void hitblock(GraphicsContext gc){
+        boolean b = false;
+        double tx = m.b.getBallXPos();
+        double ty = m.b.getBallYPos();
+        double tw = m.b.getBallR();
+        double th = m.b.getBallR();
+
+        tw += tx;
+        th += ty;
+
+        for(int i = 0; i < m.bg.b.length;i++){
+            double tempX, tempY, tempW, tempH;
+            tempX = (m.bg.b[i].getBrickposx1() + m.bg.b[i].getBrickposx2())/2;
+            tempY = (m.bg.b[i].getBrickposx1() + m.bg.b[i].getBrickposx2())/2;
+            tempW = (m.bg.b[i].getBrickposx2() - m.bg.b[i].getBrickposx1());
+            tempH = (m.bg.b[i].getBrickposy2() - m.bg.b[i].getBrickposy1());
+            double rw = tempW + tempX;
+            double rh = tempH + tempY;
+            if ((rw < tempX || rw > tx) &&
+                    (rh < tempY || rh > ty) &&
+                    (tw < tx || tw > tempX) &&
+                    (th < ty || th > tempY)) {
+                m.bg.b[i].isvisible = false;
+            }
+
+        }
     }
 
-    public boolean fallout(){
-        return ballYPos > height;
+    public boolean hitpaddle() {
+        return m.b.getBallXPos() < m.p.getPlayerOneXPos() + m.p.getPLAYER_WIDTH() && m.b.getBallXPos() > m.p.getPlayerOneXPos() && m.b.getBallYPos() > m.p.getPlayerOneYPos() - m.p.getPLAYER_HEIGHT() && m.b.getBallYPos() <= m.p.getPlayerOneYPos() + m.b.getBallR();
     }
 
-    public void relaunch(){
-        ballXPos = originballX;
-        ballYPos = originballY;
-        playerOneXPos = originpadposX;
-        playerOneYPos = originpadposY;
+    public boolean fallout() {
+        return m.b.getBallYPos() > m.getHeight();
+    }
+
+    public void relaunch() {
+        m.b.setBallXPos(m.b.getOriginballX());
+        m.b.setBallYPos(m.b.getOriginballY());
+        m.p.setPlayerOneXPos(m.p.getOriginpadposX());
+        m.p.setPlayerOneYPos(m.p.getOriginpadposY());
+        for(int i = 0; i < m.bg.b.length;i++){
+            m.bg.b[i].isvisible = true;
+        }
         gameStarted = false;
     }
 
     @Override
     public void start(Stage primaryStage) throws Exception {
-        Canvas canvas = new Canvas(width, height);
-        GraphicsContext gc = canvas.getGraphicsContext2D();
+
         Timeline tl = new Timeline(new KeyFrame(Duration.millis(10), e -> run(gc)));
         tl.setCycleCount(Timeline.INDEFINITE);
         canvas.setFocusTraversable(true);
-        canvas.addEventFilter(MouseEvent.ANY, (e) -> canvas.requestFocus());
+        canvas.requestFocus();
         canvas.setOnKeyPressed(e -> {
-            switch (e.getCode()){
-                case Q: playerOneXPos -= 50;
-                break;
-                case D: playerOneXPos += 50;
-                break;
+            switch (e.getCode()) {
+                case LEFT:
+                    e.consume();
+                    m.p.setPlayerOneXPos(m.p.getPlayerOneXPos() - 25);
+                    break;
+                case RIGHT:
+                    e.consume();
+                    m.p.setPlayerOneXPos(m.p.getPlayerOneXPos() + 25);
+                    break;
             }
         });
 
 
         canvas.setOnKeyReleased(e -> {
-            switch(e.getCode()){
-                case Q: playerOneXPos -= 0;
+            switch (e.getCode()) {
+                case Q:
+                    m.p.setPlayerOneXPos(m.p.getPlayerOneXPos());
                     break;
-                case D: playerOneXPos += 0;
+                case D:
+                    m.p.setPlayerOneXPos(m.p.getPlayerOneXPos());
                     break;
             }
         });
-        canvas.setOnMouseClicked(e ->  {gameStarted = true; cmp+=1;});
+        canvas.setOnMouseClicked(e -> {
+            gameStarted = true;
+            cmp += 1;
+        });
         BorderPane root = new BorderPane();
-        root.setTop(topGui());
+        root.setTop(topGui(tl));
         root.setCenter(canvas);
-        root.setLeft(leftGui());
+        root.setLeft(leftGui(tl));
         root.setBottom(bottomGui());
-        primaryStage.setScene(new Scene(root,1024,768));
+        primaryStage.setScene(new Scene(root, 1024, 768));
         primaryStage.show();
         tl.play();
     }
+
     private void run(GraphicsContext gc) {
         gc.setFill(Color.BLACK);
-        gc.fillRect(0, 0, width, height);
+        gc.fillRect(0, 0, m.getWidth(), m.getHeight());
         gc.setFill(Color.WHITE);
         gc.setFont(Font.font(25));
-        if(gameStarted) {
-            ballXPos+=ballXSpeed;
-            ballYPos+=ballYSpeed;
+        if (gameStarted) {
+            m.b.setBallXPos(m.b.getBallXPos() + m.b.getBallXSpeed());
+            m.b.setBallYPos(m.b.getBallYPos() + m.b.getBallYSpeed());
         } else {
             gc.setStroke(Color.YELLOW);
             gc.setTextAlign(TextAlignment.CENTER);
-            gc.strokeText("Click to Start", width / 2, height / 2);
+            gc.strokeText("Click to Start", m.getWidth() / 2, m.getHeight() / 2);
         }
-        if(hitWall()){
-            ballXSpeed *= -1;
-        }
-
-        if(hitUpperWall()){
-            ballYSpeed *= - 1;
+        if (hitWall()) {
+            m.b.setBallXSpeed(m.b.getBallXSpeed() * (-1));
         }
 
-        if(hitpaddle()){
-            if(ballXPos > playerOneXPos + PLAYER_WIDTH/2) {
+        if (hitUpperWall()) {
+            m.b.setBallXSpeed(m.b.getBallXSpeed() * (-1));
+            m.b.setBallYSpeed(m.b.getBallYSpeed() * (-1));
+        }
+        hitblock(gc);
+
+        if (hitpaddle()) {
+            //Decouper en trois coté gauche, milieu puis centre
+            if (m.b.getBallXPos() > m.p.getPlayerOneXPos() + m.p.getPLAYER_WIDTH() / 2) {
                 System.out.println("Second Half");
-                System.out.println("Ball Speed for X : "  + ballXSpeed + " Ball speed for Y : " + ballYSpeed);
-                System.out.println("Ball Position for X : "  + ballXPos + " Ball position for Y : " + ballYPos);
-                System.out.println("Player Position for X : "  + playerOneXPos + " Player position for Y : " + playerOneYPos);
 
-                if (ballXSpeed < 0) ballXSpeed *= -1;
-                ballYSpeed *= -1;
-            }else if(ballXPos < playerOneXPos + PLAYER_WIDTH/2){
+
+                if (m.b.getBallXSpeed() < 0) m.b.setBallXSpeed(m.b.getBallXSpeed() * (-1));
+                m.b.setBallYSpeed(m.b.getBallYSpeed() * (-1));
+            } else if (m.b.getBallXPos() < m.p.getPlayerOneXPos() + m.p.getPLAYER_WIDTH() / 2) {
                 System.out.println("First Half");
-                System.out.println("Ball Speed for X : "  + ballXSpeed + " Ball speed for Y : " + ballYSpeed);
-                System.out.println("Ball Position for X : "  + ballXPos + " Ball position for Y : " + ballYPos);
-                System.out.println("Player Position for X : "  + playerOneXPos + " Player position for Y : " + playerOneYPos);
-                if(ballXSpeed > 0) ballXSpeed *= -1;
-                ballYSpeed *= -1;
+                System.out.println("Ball Speed for X : " + m.b.getBallXSpeed() + " Ball speed for Y : " + m.b.getBallYSpeed());
+                System.out.println("Ball Position for X : " + m.b.getBallXPos() + " Ball position for Y : " + m.b.getBallYPos());
+                System.out.println("Player Position for X : " + m.p.getPlayerOneXPos() + " Player position for Y : " + m.p.getPlayerOneYPos());
+                if (m.b.getBallXSpeed() > 0) m.b.setBallXSpeed(m.b.getBallXSpeed() * -1);
+                m.b.setBallYSpeed(m.b.getBallYSpeed() * -1);
             }
 
         }
 
-        if(fallout()){
+        if (fallout()) {
             relaunch();
             cmp = 0;
 
         }
-        gc.fillOval(ballXPos, ballYPos, BALL_R, BALL_R);
-        gc.fillRect(playerOneXPos, playerOneYPos, PLAYER_WIDTH, PLAYER_HEIGHT);
+        gc.fillOval(m.b.getBallXPos(), m.b.getBallYPos(), m.b.getBallR(), m.b.getBallR());
+        gc.fillRect(m.p.getPlayerOneXPos(), m.p.getPlayerOneYPos(), m.p.getPLAYER_WIDTH(), m.p.getPLAYER_HEIGHT());
+        for(int i = 0; i < m.bg.b.length;i++){
+            if(m.bg.b[i].isvisible){
+                gc.fillRect((m.bg.b[i].getBrickposx1() + m.bg.b[i].getBrickposx2())/2,(m.bg.b[i].getBrickposx1() + m.bg.b[i].getBrickposx2())/2,(m.bg.b[i].getBrickposx2() - m.bg.b[i].getBrickposx1()),(m.bg.b[i].getBrickposy2() - m.bg.b[i].getBrickposy1()));
+                gc.setFill(m.bg.b[i].getC());
+            }
+        }
     }
-    public static void main (String[] args){
+
+    public static void main(String[] args) {
         Application.launch();
     }
 }
+

@@ -1,33 +1,67 @@
+import javafx.scene.paint.Color;
+import sun.plugin.dom.css.RGBColor;
+
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.stream.Stream;
 
 public class Model {
-    private static int width = 400;
-    private static int height = 600;
-    Reader r = new Reader();
-    Paddle p = new Paddle();
-    Ball b = new Ball();
+    public int width;
+    public int height;
+    Reader r;
+    Paddle p;
+    Ball b;
+    BlockGrid bg;
+    String m = "";
 
-    public Model() {
+    public Model() throws IOException {
+        r = new Reader();
+        width = Integer.parseInt(levelLoader("Niveaux/niveau1").get(0)[0]);
+        height = Integer.parseInt(levelLoader("Niveaux/niveau1").get(0)[1]);
+        p = new Paddle();
+        b = new Ball(width/2,height - p.PLAYER_HEIGHT - b.BALL_R,width/2,height - p.PLAYER_HEIGHT - b.BALL_R);
+        bg = levelBlocks("src/Niveaux/niveau1");
+
     }
 
-    public static int getWidth() {
+    public void setBg(BlockGrid bg) {
+        this.bg = bg;
+    }
+
+    public int getWidth() {
         return width;
     }
 
-    public static int getHeight() {
+    public int getHeight() {
         return height;
     }
 
+    public ArrayList<String[]> levelLoader(String path) throws IOException{
+        ArrayList<String> l = r.levelparameters(path);
+        ArrayList<String[]> d = r.formatBeforeView(l);
+        return d;
+    }
+
+    public BlockGrid levelBlocks(String path) throws IOException {
+        width = Integer.parseInt(levelLoader(path).get(0)[0]);
+        height = Integer.parseInt(levelLoader(path).get(0)[1]);
+        ArrayList<String[]> level = levelLoader(path);
+        BlockGrid bg = new BlockGrid(new Block[level.size() - 1]);
+        for(int i = 1; i < level.size();i++){
+            bg.b[i-1] = new Block(Integer.parseInt(level.get(i)[0]),
+                        Integer.parseInt(level.get(i)[1]),Integer.parseInt(level.get(i)[2]),Integer.parseInt(level.get(i)[3]),Color.web(level.get(i)[4]));
+
+        }
+        return bg;
+    }
     class Reader{
         public ArrayList<String> levelparameters(String name) throws IOException {
             ArrayList<String> str = new ArrayList<String>();
             try (Stream<String> stream = Files.lines(Paths.get(name))) {
                 stream.forEach(str::add);
-
             }
             return str;
         }
@@ -49,7 +83,7 @@ public class Model {
                 return res;
             }catch(Exception e){
                 e = new IOException("FileFormatException");
-                System.out.println(e);
+                m = "Unable to load";
                 return null;
             }
         }
@@ -66,16 +100,21 @@ public class Model {
                     for(int j = 0; j < tmp.length-1; j++){
                         if(j%2 == 0){
                             if(Integer.parseInt(tmp[j]) < 0 || Integer.parseInt(tmp[j]) > largeur){
+                                m = "unable to load";
                                 throw new IOException("NumberFormatException");
                             }
                         }else{
                             if(Integer.parseInt(tmp[j]) < 0 || Integer.parseInt(tmp[j]) > longueur){
+                                m = "Unable to load";
                                 throw new IOException("NumberFormatException");
                             }
                         }
                     }
                     res.add(tmp);
-                }else throw new IOException("FileFormatException");
+                }else{
+                    m = "Unable to load";
+                    throw new IOException("FileFormatException");
+                }
             }
             return res;
         }
@@ -88,6 +127,8 @@ public class Model {
                 System.out.println();
             }
         }
+
+
     }
 
     class Paddle{
@@ -97,6 +138,7 @@ public class Model {
         private final int PLAYER_WIDTH = 100;
         private double playerOneXPos = width/2 - width/10;
         private double playerOneYPos = height - 15;
+
 
         public double getOriginpadposX() {
             return originpadposX;
@@ -135,13 +177,16 @@ public class Model {
         private final double BALL_R = 15;
         private int ballYSpeed = 1;
         private int ballXSpeed = 1;
-        private final double originballX = width/2;
-        private final double originballY = height - new Paddle().PLAYER_HEIGHT - BALL_R;
-        private double ballXPos = width/2;
-        private double ballYPos = height - new Paddle().PLAYER_HEIGHT - BALL_R;
+        private final double originballX;
+        private final double originballY;
+        private double ballXPos;
+        private double ballYPos;
 
-        public Ball(){
-
+        public Ball(double originballX,double originballY,double ballXPos,double ballYPos){
+            this.originballX = originballX;
+            this.originballY = originballY;
+            this.ballXPos = ballXPos;
+            this.ballYPos = ballYPos;
         }
 
         public double getBallR() {
@@ -190,6 +235,68 @@ public class Model {
     }
 
     class Block{
+        private double brickposx1;
+        private double brickposy1;
+        private double brickposx2;
+        private double brickposy2;
+        private Color c;
+        public boolean isvisible = true;
+
+        public Block(double brickposx1, double brickposy1, double brickposx2, double brickposy2, Color c) {
+            this.brickposx1 = brickposx1;
+            this.brickposy1 = brickposy1;
+            this.brickposx2 = brickposx2;
+            this.brickposy2 = brickposy2;
+            this.c = c;
+        }
+
+        public double getBrickposx1() {
+            return brickposx1;
+        }
+
+        public double getBrickposy1() {
+            return brickposy1;
+        }
+
+        public double getBrickposx2() {
+            return brickposx2;
+        }
+
+        public double getBrickposy2() {
+            return brickposy2;
+        }
+
+        public Color getC() {
+            return c;
+        }
+
+        public void setBrickposx1(double brickposx1) {
+            this.brickposx1 = brickposx1;
+        }
+
+        public void setBrickposy1(double brickposy1) {
+            this.brickposy1 = brickposy1;
+        }
+
+        public void setBrickposx2(double brickposx2) {
+            this.brickposx2 = brickposx2;
+        }
+
+        public void setBrickposy2(double brickposy2) {
+            this.brickposy2 = brickposy2;
+        }
+
+        public void setC(Color c) {
+            this.c = c;
+        }
+    }
+
+    class BlockGrid{
+        public Block [] b;
+
+        public BlockGrid(Block [] bl){
+            b = bl;
+        }
 
     }
 }
